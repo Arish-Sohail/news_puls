@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>News Intelligence Pulse</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+          --bg: #0a0a0f;
+          --surface: #111118;
+          --surface2: #18181f;
+          --border: rgba(255,255,255,0.06);
+          --border-hover: rgba(255,255,255,0.12);
+          --accent: #7c6cff;
+          --accent2: #ff6c9d;
+          --accent3: #6cffe4;
+          --text: #f0eeff;
+          --muted: #6b6880;
+          --muted2: #3a3850;
+          --pos: #3dffa0;
+          --neg: #ff4d6d;
+          --neu: #a0a0c0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: 'DM Sans', sans-serif;
+          background: var(--bg);
+          color: var(--text);
+          min-height: 100vh;
+          overflow-x: hidden;
+        }
+        body::before {
+          content: '';
+          position: fixed;
+          top: -200px; left: -200px;
+          width: 600px; height: 600px;
+          background: radial-gradient(circle, rgba(124,108,255,0.12) 0%, transparent 70%);
+          pointer-events: none;
+          z-index: 0;
+        }
+        body::after {
+          content: '';
+          position: fixed;
+          bottom: -100px; right: -100px;
+          width: 500px; height: 500px;
+          background: radial-gradient(circle, rgba(255,108,157,0.08) 0%, transparent 70%);
+          pointer-events: none;
+          z-index: 0;
+        }
+        .wrap { position: relative; z-index: 1; max-width: 1280px; margin: 0 auto; padding: 32px 24px; }
+
+        /* Header */
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+        .logo { display: flex; align-items: center; gap: 12px; }
+        .logo-mark {
+          width: 40px; height: 40px; border-radius: 12px;
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          display: flex; align-items: center; justify-content: center;
+          font-size: 18px;
+        }
+        .logo-text h1 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+        .logo-text p { font-size: 12px; color: var(--muted); margin-top: 1px; }
+        .cur-kw { color: var(--accent); font-weight: 500; }
+
+        /* Search */
+        .search-wrap {
+          display: flex; align-items: center; gap: 8px;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 14px; padding: 6px 6px 6px 16px;
+          transition: border-color 0.2s;
+        }
+        .search-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,108,255,0.15); }
+        .search-wrap input {
+          background: transparent; border: none; outline: none;
+          color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; width: 220px;
+        }
+        .search-wrap input::placeholder { color: var(--muted); }
+        .btn-search {
+          background: linear-gradient(135deg, var(--accent), var(--accent2));
+          color: #fff; border: none; border-radius: 10px;
+          padding: 8px 18px; font-family: 'DM Sans', sans-serif;
+          font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-search:hover { opacity: 0.9; transform: scale(1.02); }
+
+        /* Grid */
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* KPI cards */
+        .kpi-grid { grid-column: 1 / 3; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .kpi {
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 20px; padding: 24px; position: relative; overflow: hidden;
+          transition: border-color 0.2s, transform 0.2s;
+        }
+        .kpi:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .kpi::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+          background: linear-gradient(90deg, var(--accent), var(--accent2));
+        }
+        .kpi-icon {
+          width: 44px; height: 44px; border-radius: 12px;
+          background: rgba(124,108,255,0.15); display: flex; align-items: center; justify-content: center;
+          font-size: 20px; margin-bottom: 16px;
+        }
+        .kpi label { display: block; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 6px; }
+        .kpi-val { font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; line-height: 1; }
+        .kpi-glow { position: absolute; bottom: -20px; right: -20px; width: 100px; height: 100px; border-radius: 50%; background: radial-gradient(circle, rgba(124,108,255,0.1), transparent 70%); }
+
+        /* Charts */
+        .charts-row { grid-column: 1 / 3; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .card {
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 20px; padding: 22px;
+          transition: border-color 0.2s;
+        }
+        .card:hover { border-color: var(--border-hover); }
+        .card-title { font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+        .card-title span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+
+        /* Feed — full-width section below charts */
+        .feed-section {
+          margin-top: 16px;
+          background: var(--surface); border: 1px solid var(--border);
+          border-radius: 20px; overflow: hidden;
+        }
+        .feed-head {
+          padding: 16px 22px; border-bottom: 1px solid var(--border);
+          display: flex; justify-content: space-between; align-items: center;
+          background: rgba(255,255,255,0.02);
+        }
+        .feed-head-title { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 8px var(--pos); animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100% { opacity:1; box-shadow: 0 0 8px var(--pos); } 50% { opacity:0.5; box-shadow: 0 0 16px var(--pos); } }
+        .btn-refresh {
+          background: var(--surface2); border: 1px solid var(--border);
+          color: var(--muted); border-radius: 8px; padding: 5px 10px;
+          font-size: 12px; font-family: 'DM Sans', sans-serif; cursor: pointer;
+          transition: all 0.2s;
+        }
+        .btn-refresh:hover { border-color: var(--accent); color: var(--accent); }
+        .feed-body {
+          overflow-x: auto; overflow-y: hidden;
+          display: flex; gap: 12px; padding: 16px 22px;
+          scrollbar-width: thin; scrollbar-color: var(--muted2) transparent;
+        }
+        .feed-body::-webkit-scrollbar { height: 4px; }
+        .feed-body::-webkit-scrollbar-thumb { background: var(--muted2); border-radius: 4px; }
+        .feed-item {
+          background: var(--surface2); border: 1px solid var(--border);
+          border-radius: 16px; padding: 16px;
+          min-width: 280px; max-width: 280px; flex-shrink: 0;
+          transition: border-color 0.2s, transform 0.15s;
+          animation: fadeUp 0.3s ease both;
+        }
+        @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+        .feed-item:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+        .feed-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 4px; }
+        .src-badge { font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 20px; }
+        .sent-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.05em; text-transform: uppercase; }
+        .s-pos { background: rgba(61,255,160,0.12); color: var(--pos); }
+        .s-neg { background: rgba(255,77,109,0.12); color: var(--neg); }
+        .s-neu { background: rgba(160,160,192,0.1); color: var(--neu); }
+        .feed-content { font-size: 12px; color: rgba(240,238,255,0.65); line-height: 1.55; }
+        .feed-time { font-size: 10px; color: var(--muted); margin-top: 8px; }
+
+        /* Sentiment bar */
+        .sent-bar-wrap { margin-bottom: 14px; }
+        .sent-bar { display: flex; height: 6px; border-radius: 99px; overflow: hidden; gap: 2px; }
+        .sb-seg { border-radius: 99px; transition: width 0.6s ease; }
+        .sent-row { display: flex; gap: 16px; margin-top: 10px; flex-wrap: wrap; }
+        .sent-stat { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+        .sent-stat b { color: var(--text); font-weight: 500; }
+
+        /* Source bars */
+        .src-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .src-name { font-size: 12px; color: var(--muted); width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex-shrink: 0; }
+        .src-bar-bg { flex: 1; height: 5px; background: var(--muted2); border-radius: 99px; overflow: hidden; }
+        .src-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s ease; }
+        .src-ct { font-size: 11px; color: var(--muted); min-width: 18px; text-align: right; }
+
+        .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 40px 20px; opacity: 0.6; }
+
+        /* Doughnut chart wrapper */
+        .chart-doughnut-wrap { position: relative; height: 160px; }
+
+        @media (max-width: 900px) {
+          .grid { grid-template-columns: 1fr; }
+          .kpi-grid, .charts-row { grid-column: 1; grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+
+    <header>
+        <div class="logo">
+            <div class="logo-mark">⚡</div>
+            <div class="logo-text">
+                <h1>News Intelligence Pulse</h1>
+                <p>Tracking: <span class="cur-kw" id="cur-kw">all topics</span></p>
+            </div>
+        </div>
+        <div class="search-wrap">
+            <svg width="14" height="14" fill="none" stroke="#6b6880" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="keyword-input" type="text" placeholder="Search any topic…" onkeydown="if(event.key==='Enter')go()">
+            <button class="btn-search" onclick="go()">Analyze ↗</button>
+        </div>
+    </header>
+
+    <div class="grid">
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+            <div class="kpi">
+                <div class="kpi-icon">📰</div>
+                <label>Articles Analyzed</label>
+                <div class="kpi-val" id="kpi-count">—</div>
+                <div class="kpi-glow"></div>
+            </div>
+            <div class="kpi" id="kpi-sent-card">
+                <div class="kpi-icon" id="kpi-icon">🧠</div>
+                <label>Avg. Sentiment</label>
+                <div class="kpi-val" id="kpi-sent">—</div>
+                <div class="kpi-glow" style="background:radial-gradient(circle,rgba(255,108,157,0.1),transparent 70%)"></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+            <div class="card">
+                <div class="card-title"><span></span>Press Sentiment</div>
+                <div class="sent-bar-wrap">
+                    <div class="sent-bar" id="sent-bar">
+                        <div class="sb-seg" style="width:100%;background:var(--muted2);"></div>
+                    </div>
+                    <div class="sent-row" id="sent-legend">
+                        <span class="sent-stat">● Positive <b>0</b></span>
+                        <span class="sent-stat">● Neutral <b>0</b></span>
+                        <span class="sent-stat">● Negative <b>0</b></span>
+                    </div>
+                </div>
+                <div class="chart-doughnut-wrap"><canvas id="doughnut"></canvas></div>
+            </div>
+            <div class="card">
+                <div class="card-title"><span></span>Top Sources</div>
+                <div id="src-list"><div class="empty" style="padding:20px 0;font-size:12px;">No data yet</div></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Live Feed — full-width scrollable section -->
+    <div class="feed-section">
+        <div class="feed-head">
+            <div class="feed-head-title"><div class="pulse-dot"></div> Live Feed</div>
+            <button class="btn-refresh" onclick="fetchDashboardData()">↻ Refresh</button>
+        </div>
+        <div class="feed-body" id="feed-body">
+            <div class="empty" style="width:100%;text-align:center;">🔍 Search a keyword to start</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API = 'http://localhost:8080/api/analytics';
+    let keyword = '', dChart = null;
+
+    function go() {
+      const v = document.getElementById('keyword-input').value.trim();
+      if (!v) return;
+      keyword = v;
+      document.getElementById('cur-kw').textContent = v;
+      document.getElementById('feed-body').innerHTML = '<div class="empty" style="width:100%;text-align:center;">⏳ Fetching live data…</div>';
+      fetchDashboardData();
+    }
+
+    async function fetchDashboardData() {
+      if (!keyword) return;
+      try {
+        await fetch(`${API}/fetch-now?keyword=${encodeURIComponent(keyword)}`);
+        const data = await (await fetch(`${API}/feed`)).json();
+        const posts = data.filter(p => p.keyword.toLowerCase() === keyword.toLowerCase());
+        const avg = posts.length ? posts.reduce((s,p) => s + p.sentimentScore, 0) / posts.length : 0;
+        renderKPIs(posts.length, avg);
+        renderFeed(posts);
+        renderCharts(posts);
+      } catch {
+        document.getElementById('feed-body').innerHTML = '<div class="empty" style="width:100%;text-align:center;color:var(--neg)">Backend offline — start Spring Boot on :8080</div>';
+      }
+    }
+
+    function renderKPIs(n, avg) {
+      document.getElementById('kpi-count').textContent = n;
+      const el = document.getElementById('kpi-sent');
+      el.textContent = avg.toFixed(2);
+      if (avg > 0.2) { el.style.color = 'var(--pos)'; document.getElementById('kpi-icon').textContent = '😊'; }
+      else if (avg < -0.2) { el.style.color = 'var(--neg)'; document.getElementById('kpi-icon').textContent = '😟'; }
+      else { el.style.color = 'var(--neu)'; document.getElementById('kpi-icon').textContent = '😐'; }
+    }
+
+    const COLORS = ['#7c6cff','#ff6c9d','#6cffe4','#ffb86c','#a8ff6c','#ff6c6c'];
+    function srcColor(s) { let h=0; for(let c of s) h=c.charCodeAt(0)+((h<<5)-h); return COLORS[Math.abs(h)%COLORS.length]; }
+
+    function renderFeed(posts) {
+      const b = document.getElementById('feed-body');
+      if (!posts.length) { b.innerHTML = '<div class="empty" style="width:100%;text-align:center;">No articles found</div>'; return; }
+      b.innerHTML = posts.map((p, i) => {
+        const sc = p.sentimentScore;
+        const bc = sc > 0.2 ? 's-pos' : sc < -0.2 ? 's-neg' : 's-neu';
+        const bl = sc > 0.2 ? 'Positive' : sc < -0.2 ? 'Negative' : 'Neutral';
+        const col = srcColor(p.platform);
+        const t = new Date(p.timestamp);
+        const time = t.toLocaleDateString([],{month:'short',day:'numeric'}) + ' · ' + t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+        return `<div class="feed-item" style="animation-delay:${i*0.04}s">
+          <div class="feed-meta">
+            <span class="src-badge" style="background:${col}22;color:${col};">${p.platform}</span>
+            <span class="sent-badge ${bc}">${bl}</span>
+          </div>
+          <div class="feed-content">${p.content}</div>
+          <div class="feed-time">${time}</div>
+        </div>`;
+      }).join('');
+    }
+
+    function renderCharts(posts) {
+      let pos=0, neu=0, neg=0;
+      const src = {};
+      posts.forEach(p => {
+        if (p.sentimentScore > 0.2) pos++;
+        else if (p.sentimentScore < -0.2) neg++;
+        else neu++;
+        src[p.platform] = (src[p.platform]||0)+1;
+      });
+      const tot = pos+neu+neg || 1;
+
+      document.getElementById('sent-bar').innerHTML =
+        `<div class="sb-seg" style="width:${pos/tot*100}%;background:var(--pos);min-width:${pos?3:0}px"></div>
+         <div class="sb-seg" style="width:${neu/tot*100}%;background:var(--neu);min-width:${neu?3:0}px"></div>
+         <div class="sb-seg" style="width:${neg/tot*100}%;background:var(--neg);min-width:${neg?3:0}px"></div>`;
+
+      document.getElementById('sent-legend').innerHTML =
+        `<span class="sent-stat" style="color:var(--pos)">● Positive <b>${pos}</b></span>
+         <span class="sent-stat" style="color:var(--neu)">● Neutral <b>${neu}</b></span>
+         <span class="sent-stat" style="color:var(--neg)">● Negative <b>${neg}</b></span>`;
+
+      const ctx = document.getElementById('doughnut').getContext('2d');
+      if (dChart) dChart.destroy();
+      dChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels:['Positive','Neutral','Negative'], datasets:[{ data:[pos,neu,neg], backgroundColor:['#3dffa0','#a0a0c0','#ff4d6d'], borderWidth:0, hoverOffset:6 }] },
+        options: { responsive:true, maintainAspectRatio:false, cutout:'75%', plugins:{ legend:{ position:'bottom', labels:{ color:'#6b6880', font:{size:11}, boxWidth:8, padding:12 } } } }
+      });
+
+      const sorted = Object.entries(src).sort((a,b)=>b[1]-a[1]).slice(0,5);
+      const max = sorted[0]?.[1]||1;
+      document.getElementById('src-list').innerHTML = sorted.length
+        ? sorted.map(([n,c]) => `<div class="src-row">
+            <span class="src-name" title="${n}">${n}</span>
+            <div class="src-bar-bg"><div class="src-bar-fill" style="width:${c/max*100}%;background:${srcColor(n)};"></div></div>
+            <span class="src-ct">${c}</span>
+          </div>`).join('')
+        : '<div class="empty" style="padding:20px 0;font-size:12px;">No data</div>';
+    }
+</script>
+</body>
+</html>
